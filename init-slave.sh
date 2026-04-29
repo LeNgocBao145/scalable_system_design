@@ -31,10 +31,13 @@ listen_addresses = '*'
 hot_standby = on
 EOF
     
+    # Fix ownership
+    chown -R postgres:postgres ${PGDATA}
+    
     echo "Replication setup complete"
 else
     echo "Data directory exists. Skipping replication setup."
 fi
 
-# Start PostgreSQL
-exec postgres
+# Start PostgreSQL as postgres user
+exec su-exec postgres postgres
