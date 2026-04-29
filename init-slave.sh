@@ -31,8 +31,9 @@ listen_addresses = '*'
 hot_standby = on
 EOF
     
-    # Fix ownership
+    # Fix ownership and permissions
     chown -R postgres:postgres ${PGDATA}
+    chmod 700 ${PGDATA}
     
     echo "Replication setup complete"
 else
