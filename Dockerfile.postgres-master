@@ -1,0 +1,6 @@
+FROM postgres:15-alpine
+
+COPY src/schema.sql /docker-entrypoint-initdb.d/01-schema.sql
+COPY init-replication-user.sh /docker-entrypoint-initdb.d/02-init-replication-user.sh
+COPY init-db-user.sh /docker-entrypoint-initdb.d/03-init-db-user.sh
+COPY init-pg-hba.sh /docker-entrypoint-initdb.d/04-init-pg-hba.sh

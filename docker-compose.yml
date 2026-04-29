@@ -1,0 +1,114 @@
+services:
+  # PostgreSQL Master Database
+  postgres-master:
+    image: postgres:15-alpine
+    container_name: postgres-master
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      REPLICATION_USER: ${REPLICATION_USER}
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./src/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./init-replication-user.sh:/docker-entrypoint-initdb.d/02-init-replication-user.sh
+      - postgres-master-data:/var/lib/postgresql/data
+    command: |
+      postgres
+      -c listen_addresses='*'
+      -c wal_level=replica
+      -c max_wal_senders=3
+      -c wal_keep_size=64
+      -c max_replication_slots=3
+      -c hba_file=/var/lib/postgresql/data/pg_hba.conf
+    networks:
+      - app-network
+
+  # PostgreSQL Slave Database (Read Replica)
+  postgres-slave:
+    image: postgres:15-alpine
+    container_name: postgres-slave
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-slave-data:/var/lib/postgresql/data
+    command: |
+      postgres
+      -c listen_addresses='*'
+      -c hot_standby=on
+    depends_on:
+      - postgres-master
+    networks:
+      - app-network
+
+  # API Node A
+  api-node-a:
+    image: scalable-api:latest
+    container_name: api-node-a
+    environment:
+      PORT: 3000
+      NODE_ID: Node_A
+      MASTER_HOST: postgres-master
+      MASTER_PORT: 5432
+      SLAVE_HOST: postgres-slave
+      SLAVE_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres-master
+      - postgres-slave
+    networks:
+      - app-network
+
+  # API Node B
+  api-node-b:
+    image: scalable-api:latest
+    container_name: api-node-b
+    environment:
+      PORT: 3001
+      NODE_ID: Node_B
+      MASTER_HOST: postgres-master
+      MASTER_PORT: 5432
+      SLAVE_HOST: postgres-slave
+      SLAVE_PORT: 5432
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres-master
+      - postgres-slave
+    networks:
+      - app-network
+
+  # Nginx Load Balancer
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-lb
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api-node-a
+      - api-node-b
+    networks:
+      - app-network
+
+volumes:
+  postgres-master-data:
+  postgres-slave-data:
+
+networks:
+  app-network:
+    driver: bridge
