@@ -9,6 +9,9 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       REPLICATION_USER: ${REPLICATION_USER}
       REPLICATION_PASSWORD: ${REPLICATION_PASSWORD}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
     ports:
       - "5432:5432"
     volumes:
