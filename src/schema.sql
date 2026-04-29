@@ -1,5 +1,3 @@
-CREATE DATABASE products_db;
-
 \c products_db;
 
 CREATE TABLE IF NOT EXISTS products (
